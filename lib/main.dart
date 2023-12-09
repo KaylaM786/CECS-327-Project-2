@@ -1,125 +1,156 @@
-import 'package:flutter/material.dart';
+import 'dart:convert'; 
+import 'dart:io';
+import 'dart:typed_data'; 
+import 'package:file_sharing_app/constant.dart';
+import 'package:flutter/material.dart'; 
+import 'package:image_picker/image_picker.dart'; 
+import 'package:flutter_image_compress/flutter_image_compress.dart'; 
+import 'package:mongo_dart/mongo_dart.dart' show Db, GridFS; 
+  
+void main() => runApp(MyApp()); 
+  
+class MyApp extends StatelessWidget { 
+  
+  @override 
+  Widget build(BuildContext context) { 
+    return MaterialApp( 
+      title: 'File Sharing System', 
+      debugShowCheckedModeBanner: false, 
+      theme: ThemeData( 
+        primarySwatch: Colors.green, 
+      ), 
+      home: MyHomePage(title: 'Share Images'), 
+    ); 
+  } 
+} 
+  
+class MyHomePage extends StatefulWidget { 
+  MyHomePage({Key? key, required this.title}) : super(key: key); 
+  
+  
+  final String title; 
+  
+  @override 
+  _MyHomePageState createState() => _MyHomePageState(); 
+} 
+  
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin{ 
 
-void main() {
-  runApp(const MyApp());
-}
+  
+  final picker = ImagePicker(); 
+  late File _image; 
+  late GridFS bucket; 
+  late AnimationController _animationController; 
+  late Animation<Color> _colorTween; 
+  late ImageProvider provider = MemoryImage(Uint8List(0)); 
+  var flag = false; 
+    
+  @override 
+  void initState() { 
+  
+    _animationController = AnimationController( 
+      duration: Duration(milliseconds: 1800), 
+      vsync: this, 
+    ); 
+    _colorTween = _animationController.drive(Tween(begin: Colors.purple,end: Colors.white,)); 
+    _animationController.repeat(); 
+    super.initState(); 
+    connection(); 
+  } 
+  
+  Future getImage() async{ 
+    
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery); 
+  
+    if(pickedFile!=null){ 
+  
+      var _cmpressed_image; 
+      try { 
+        _cmpressed_image = await FlutterImageCompress.compressWithFile( 
+            pickedFile.path, 
+            format: CompressFormat.heic, 
+            quality: 70 
+        ); 
+      } catch (e) { 
+  
+        _cmpressed_image = await FlutterImageCompress.compressWithFile( 
+            pickedFile.path, 
+            format: CompressFormat.jpeg, 
+            quality: 70 
+        ); 
+      } 
+      setState(() { 
+        flag = true; 
+      }); 
+  
+      Map<String,dynamic> ?image = { 
+        "_id" : pickedFile.path.split("/").last, 
+        "data": base64Encode(_cmpressed_image) 
+      }; 
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+      var res = await bucket.chunks.insert(image); 
+      var img = await bucket.chunks.findOne({ 
+        "_id": pickedFile.path.split("/").last 
+      }); 
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
-  }
-}
+      setState(() { 
+        provider = MemoryImage(base64Decode(img!["data"])); 
+        flag = false; 
+      }); 
+    } 
+  } 
+    
+  @override 
+  Widget build(BuildContext context) { 
+  
+    return Scaffold( 
+      appBar: AppBar( 
+        title: Text(widget.title), 
+        backgroundColor: Colors.green, 
+      ), 
+      body: SingleChildScrollView( 
+        child: Center( 
+          child:  Column( 
+            children: [ 
+              SizedBox( 
+                height: 20, 
+              ), 
+              provider == null ? Text('No image selected.') : Image(image: provider,), 
+              SizedBox(height: 10,), 
+              if(flag==true) 
+                CircularProgressIndicator(valueColor: _colorTween), 
+                SizedBox(height: 20,),
+                ElevatedButton( 
+                onPressed: getImage, 
+                child: Container( 
+                  decoration: BoxDecoration( 
+                    gradient: LinearGradient( 
+                      colors: <Color>[ 
+                        Colors.green, 
+                        Color.fromARGB(255, 103, 58, 159), 
+                        Color.fromARGB(255, 67, 120, 199), 
+                      ], 
+                    ), 
+                  ), 
+                  padding: const EdgeInsets.all(10.0), 
+                  child: const Text( 
+                      'Select Image', 
+                      style: TextStyle(fontSize: 20) 
+                  ), 
+                ), 
+  
+              ), 
+            ], 
+          ), 
+        ) 
+      ) 
+  
+    ); 
+  } 
+  
+  Future connection () async{ 
+    var db = await Db.create(MONGO_URL);
+    await db.open(secure: true); 
+    bucket = GridFS(db,COLLECTION_NAME); 
+  } 
+} 
