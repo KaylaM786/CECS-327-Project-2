@@ -5,18 +5,18 @@ A file-sharing system built with Flutter using MongoDB to store shared files. Th
 ## Getting Started
 
 Make sure you have the following:
-> Flutter JDK: https://docs.flutter.dev/get-started/install
-> Android Studio: https://developer.android.com/studio
-> Visual Studio Code: https://code.visualstudio.com/
-> MongoDB Account: https://www.mongodb.com/
+* Flutter JDK: https://docs.flutter.dev/get-started/install
+* Android Studio: https://developer.android.com/studio
+* Visual Studio Code: https://code.visualstudio.com/
+* MongoDB Account: https://www.mongodb.com/
 
 ## How to Run our App
 1. Create a new flutter project
 2. Replace the 'pubspec.yaml' file with ours
 3. Type 'pub spec get' into the terminal to update dependencies
 4. Add our 'main.dart' and 'constant.dart' source files to the 'lib' folder in your new flutter project
-     > Create a new MongoDB project and replace your link with the one in constant.dart to connect to your database along with your collection.
-     > Refer to this video for more information [Connect Flutter with MongoDB](https://www.youtube.com/watch?v=PpYATokJiSE)
+     * Create a new MongoDB project and replace your link with the one in constant.dart to connect to your database along with your collection.
+     * Refer to this video for more information [Connect Flutter with MongoDB](https://www.youtube.com/watch?v=PpYATokJiSE)
 6. Add the Image Folder to the flutter project
 7. Save all files.
 8. In your terminal within VS Code type in 'flutter run'
