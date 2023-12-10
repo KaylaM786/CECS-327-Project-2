@@ -1,156 +1,220 @@
-import 'dart:convert'; 
+// CECS 327
+// Kayla Ma, Daryl Nguyen, Tony Guirguis
+//Project 2 - File Sharing App
+
+import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data'; 
-import 'package:file_sharing_app/constant.dart';
-import 'package:flutter/material.dart'; 
-import 'package:image_picker/image_picker.dart'; 
-import 'package:flutter_image_compress/flutter_image_compress.dart'; 
-import 'package:mongo_dart/mongo_dart.dart' show Db, GridFS; 
-  
-void main() => runApp(MyApp()); 
-  
-class MyApp extends StatelessWidget { 
-  
-  @override 
-  Widget build(BuildContext context) { 
-    return MaterialApp( 
-      title: 'File Sharing System', 
-      debugShowCheckedModeBanner: false, 
-      theme: ThemeData( 
-        primarySwatch: Colors.green, 
-      ), 
-      home: MyHomePage(title: 'Share Images'), 
-    ); 
-  } 
-} 
-  
-class MyHomePage extends StatefulWidget { 
-  MyHomePage({Key? key, required this.title}) : super(key: key); 
-  
-  
-  final String title; 
-  
-  @override 
-  _MyHomePageState createState() => _MyHomePageState(); 
-} 
-  
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin{ 
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:mongo_dart/mongo_dart.dart' as mdb;
+import 'constant.dart';
 
-  
-  final picker = ImagePicker(); 
-  late File _image; 
-  late GridFS bucket; 
-  late AnimationController _animationController; 
-  late Animation<Color> _colorTween; 
-  late ImageProvider provider = MemoryImage(Uint8List(0)); 
-  var flag = false; 
-    
-  @override 
-  void initState() { 
-  
-    _animationController = AnimationController( 
-      duration: Duration(milliseconds: 1800), 
-      vsync: this, 
-    ); 
-    _colorTween = _animationController.drive(Tween(begin: Colors.purple,end: Colors.white,)); 
-    _animationController.repeat(); 
-    super.initState(); 
-    connection(); 
-  } 
-  
-  Future getImage() async{ 
-    
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery); 
-  
-    if(pickedFile!=null){ 
-  
-      var _cmpressed_image; 
-      try { 
-        _cmpressed_image = await FlutterImageCompress.compressWithFile( 
-            pickedFile.path, 
-            format: CompressFormat.heic, 
-            quality: 70 
-        ); 
-      } catch (e) { 
-  
-        _cmpressed_image = await FlutterImageCompress.compressWithFile( 
-            pickedFile.path, 
-            format: CompressFormat.jpeg, 
-            quality: 70 
-        ); 
-      } 
-      setState(() { 
-        flag = true; 
-      }); 
-  
-      Map<String,dynamic> ?image = { 
-        "_id" : pickedFile.path.split("/").last, 
-        "data": base64Encode(_cmpressed_image) 
-      }; 
+void main() {
+  runApp(MyApp());
+}
 
-      var res = await bucket.chunks.insert(image); 
-      var img = await bucket.chunks.findOne({ 
-        "_id": pickedFile.path.split("/").last 
-      }); 
+//created to set up structure of the app
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+      scaffoldBackgroundColor: Color.fromARGB(255, 218, 166, 210)),
+      home: MyHomePage(),
+    );
+  }
+}
 
-      setState(() { 
-        provider = MemoryImage(base64Decode(img!["data"])); 
-        flag = false; 
-      }); 
-    } 
-  } 
-    
-  @override 
-  Widget build(BuildContext context) { 
-  
-    return Scaffold( 
-      appBar: AppBar( 
-        title: Text(widget.title), 
-        backgroundColor: Colors.green, 
-      ), 
-      body: SingleChildScrollView( 
-        child: Center( 
-          child:  Column( 
-            children: [ 
-              SizedBox( 
-                height: 20, 
-              ), 
-              provider == null ? Text('No image selected.') : Image(image: provider,), 
-              SizedBox(height: 10,), 
-              if(flag==true) 
-                CircularProgressIndicator(valueColor: _colorTween), 
-                SizedBox(height: 20,),
-                ElevatedButton( 
-                onPressed: getImage, 
-                child: Container( 
-                  decoration: BoxDecoration( 
-                    gradient: LinearGradient( 
-                      colors: <Color>[ 
-                        Colors.green, 
-                        Color.fromARGB(255, 103, 58, 159), 
-                        Color.fromARGB(255, 67, 120, 199), 
-                      ], 
-                    ), 
-                  ), 
-                  padding: const EdgeInsets.all(10.0), 
-                  child: const Text( 
-                      'Select Image', 
-                      style: TextStyle(fontSize: 20) 
-                  ), 
-                ), 
-  
-              ), 
-            ], 
-          ), 
-        ) 
-      ) 
-  
-    ); 
-  } 
-  
-  Future connection () async{ 
-    var db = await Db.create(MONGO_URL);
-    await db.open(secure: true); 
-    bucket = GridFS(db,COLLECTION_NAME); 
-  } 
-} 
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+//User Interface with uploading and displaying files features
+class _MyHomePageState extends State<MyHomePage> {
+  List<Map<String, dynamic>> files = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      //create title and descriptions to show ontop of the app
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 218, 166, 210),
+        title: Column(
+        mainAxisAlignment: MainAxisAlignment.center, 
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text('File Sharing System w/ MongoDB and Flutter', style: TextStyle(fontSize: 30)),
+          Text('By: Kayla Ma, Daryl Nguyen, & Tony Guirguis', style: TextStyle(fontSize: 13)),
+        ],
+        ),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            //add file image above the buttons
+            Image.asset("images/file_icon.png",
+            height: 200,
+            width: 200,),
+            SizedBox(height: 50),
+            ElevatedButton(
+              onPressed: () async {
+                await uploadFileToDatabase();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pink, // Customize the button color
+              ),
+              child: Text(
+                'Upload File',
+                style: TextStyle(color: Colors.white), // Customize the text color
+              ),
+            ),
+            SizedBox(height: 30),
+             ElevatedButton(
+              onPressed: () async {
+                await showFileList();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.pink, // Customize the button color
+              ),
+              child: Text(
+                'Show Files',
+                style: TextStyle(color: Colors.white), // Customize the text color
+              ),
+            ),
+            SizedBox(height: 20),
+            if (files.isNotEmpty)
+              Column(
+                children: files
+                    .map(
+                      (file) => ListTile(
+                            title: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.black), // Customize the border color
+                              ),
+                              child: Center(
+                                child: Text(file['filename']),
+                              ),
+                            ),
+                        onTap: () {
+                          // Handle file tap, display file content
+                          displayContent(context, file['filename'], List<int>.from(file['data']));
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+Future<void> uploadFileToDatabase() async {
+  // Connect to MongoDB
+  var db = await mdb.Db.create(MONGO_URL);
+  var collection = db.collection(COLLECTION_NAME);
+  await db.open();
+
+  try {
+    // this method allows you to choose a file from your device
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    //if the file doesn't equal null then the file is uploaded to the database
+    if (result != null) {
+      PlatformFile resultFile = result.files.first;
+      File file = File(resultFile.path!);
+      List<int> fileBytes = file.readAsBytesSync();
+      print(file);
+
+      // Check if file bytes are not null
+      if (fileBytes != null) {
+        // Create a new document in the collection and insert the file data
+        await collection.insertOne({'filename': resultFile.name, 'data': fileBytes});
+        print('File uploaded successfully!');
+      } else {
+        print('Failed to read file bytes.');
+      }
+    } else {
+      print('No file selected.');
+    }
+  } finally {
+    // Close the database connection
+    await db.close();
+  }
+}
+
+  Future<void> showFileList() async {
+    // Connect to MongoDB
+    var db = await mdb.Db.create(MONGO_URL);
+    await db.open();
+    var collection = db.collection(COLLECTION_NAME);
+
+    try {
+      // Retrieve files from the database
+      files = await collection.find().toList();
+    } finally {
+      // Close the database connection
+      await db.close();
+    }
+
+    // Update the UI with the refreshed file list
+    setState(() {});
+  }
+}
+
+Future<void> displayContent(BuildContext context, String filename, List<int> fileData) async {
+  String content;
+
+  // Check file type (only text and image files)
+  if (filename.endsWith('.txt')) {
+    //display text if file is .txt
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$filename:'),
+          content: SingleChildScrollView(
+            child: Text(utf8.decode(fileData)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  } else if (filename.endsWith('.jpg') || filename.endsWith('.png')) {
+    // If it's an image file, display the image
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$filename:'),
+          content: SingleChildScrollView(
+            child: Image.memory(Uint8List.fromList(fileData)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  } else {
+    // Handle other file types accordingly
+    print('Unsupported file type: $filename');
+  }
+}
+
