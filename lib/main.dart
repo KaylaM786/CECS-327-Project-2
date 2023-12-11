@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
     // Theming for UI
     return MaterialApp(
       theme: ThemeData(
+      //App background color (pink)
       scaffoldBackgroundColor: Color.fromARGB(255, 218, 166, 210)),
       home: MyHomePage(),
     );
@@ -34,6 +35,7 @@ class MyHomePage extends StatefulWidget {
 
 //User Interface with uploading and displaying files features
 class _MyHomePageState extends State<MyHomePage> {
+  //create list to hold files
   List<Map<String, dynamic>> files = [];
 
   @override
@@ -61,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
             height: 200,
             width: 200,),
             SizedBox(height: 50),
+            //upload file button
             ElevatedButton(
               onPressed: () async {
                 await uploadFileToDatabase();
@@ -74,6 +77,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             SizedBox(height: 30),
+            //show files button
              ElevatedButton(
               onPressed: () async {
                 await showFileList();
@@ -87,6 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             SizedBox(height: 20),
+            //check to see if file list is empty or not
             if (files.isNotEmpty)
               Column(
                 children: files
