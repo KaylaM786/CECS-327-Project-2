@@ -18,6 +18,7 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Theming for UI
     return MaterialApp(
       theme: ThemeData(
       scaffoldBackgroundColor: Color.fromARGB(255, 218, 166, 210)),
@@ -166,6 +167,7 @@ Future<void> uploadFileToDatabase() async {
   }
 }
 
+// function to display content to the frontend
 Future<void> displayContent(BuildContext context, String filename, List<int> fileData) async {
   String content;
 
@@ -181,6 +183,7 @@ Future<void> displayContent(BuildContext context, String filename, List<int> fil
             child: Text(utf8.decode(fileData)),
           ),
           actions: [
+            // cickable entity to close pop up
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
@@ -199,10 +202,12 @@ Future<void> displayContent(BuildContext context, String filename, List<int> fil
         return AlertDialog(
           title: Text('$filename:'),
           content: SingleChildScrollView(
+            // converts images as bytes back to image files to be displayed on frontend
             child: Image.memory(Uint8List.fromList(fileData)),
           ),
           actions: [
             TextButton(
+              // clickable entity to close box
               onPressed: () {
                 Navigator.of(context).pop(); // Close the dialog
               },
