@@ -32,7 +32,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-//User Interface with uploading and displaying files features
+//User Interface for uploading and displaying files
 class _MyHomePageState extends State<MyHomePage> {
   List<Map<String, dynamic>> files = [];
 
